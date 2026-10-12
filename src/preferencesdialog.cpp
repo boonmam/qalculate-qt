@@ -178,6 +178,7 @@ PreferencesDialog::PreferencesDialog(QWidget *parent) : QDialog(parent) {
 	BOX(tr("Disable cursor blinking"), settings->disable_cursor_blinking, disableCursorBlinkingToggled(bool));
 	BOX(tr("Colorize result"), settings->colorize_result, colorizeToggled(bool));
 	BOX(tr("Format result"), settings->format_result, formatToggled(bool));
+	BOX(tr("Stacked fractions"), settings->stacked_fractions, stackedFractionsToggled(bool));
 	l->setRowStretch(r, 1);
 	r = 0;
 	l = new QGridLayout(w4);
@@ -721,6 +722,10 @@ void PreferencesDialog::ignoreCommaToggled(bool b) {
 }
 void PreferencesDialog::colorizeToggled(bool b) {
 	settings->colorize_result = b;
+	emit historyExpressionTypeChanged();
+}
+void PreferencesDialog::stackedFractionsToggled(bool b) {
+	settings->stacked_fractions = b;
 	emit historyExpressionTypeChanged();
 }
 void PreferencesDialog::formatToggled(bool b) {

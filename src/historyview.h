@@ -64,6 +64,8 @@ class HistoryView : public QTextEdit {
 		bool initial_loaded;
 		bool b_reversed;
 
+		QString fractionHtml(const QString&, qreal scale = 1.0);
+		QVariant loadResource(int type, const QUrl &url) override;
 		void mouseDoubleClickEvent(QMouseEvent *e) override;
 		void mouseReleaseEvent(QMouseEvent *e) override;
 		void mouseMoveEvent(QMouseEvent *e) override;

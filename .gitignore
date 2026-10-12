@@ -53,3 +53,8 @@ compile_commands.json
 
 # QtCreator local machine specific files for imported projects
 *creator.user*
+
+# Local macOS app bundle and renderer test executable
+/qalculate-qt.app/
+/tests/stackedfractions-test
+/tests/.qmake.stash

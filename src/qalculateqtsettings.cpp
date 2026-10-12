@@ -830,6 +830,8 @@ void QalculateQtSettings::readPreferenceValue(const std::string &svar, const std
 			colorize_result = v;
 		} else if(svar == "format") {
 			format_result = v;
+		} else if(svar == "stacked_fractions") {
+			stacked_fractions = v;
 		} else if(svar == "language") {
 			custom_lang = QString::fromStdString(svalue);
 		} else if(svar == "default_currency") {
@@ -1155,6 +1157,7 @@ void QalculateQtSettings::loadPreferences() {
 	color = 1;
 	colorize_result = true;
 	format_result = true;
+	stacked_fractions = true;
 	enable_tooltips = 1;
 	chain_mode = false;
 	enable_input_method = false;
@@ -1660,6 +1663,7 @@ bool QalculateQtSettings::savePreferences(const char *filename, bool is_workspac
 		if(show_percent_in_numpad) fprintf(file, "show_percent_in_numpad=%i\n", show_percent_in_numpad);
 		fprintf(file, "palette=%i\n", palette);
 		fprintf(file, "color=%i\n", colorize_result);
+		fprintf(file, "stacked_fractions=%i\n", stacked_fractions);
 		if(disable_cursor_blinking) fprintf(file, "disable_cursor_blinking=%i\n", disable_cursor_blinking);
 		if(!format_result) fprintf(file, "format=%i\n", format_result);
 		fprintf(file, "use_custom_result_font=%i\n", use_custom_result_font);

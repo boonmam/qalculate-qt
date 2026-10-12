@@ -297,6 +297,7 @@ class QalculateQtSettings : QObject {
 		int color;
 		bool colorize_result;
 		bool format_result;
+		bool stacked_fractions;
 		bool first_time;
 		bool enable_input_method;
 		bool use_custom_result_font, use_custom_expression_font, use_custom_keypad_font, use_custom_app_font, use_custom_status_font, use_custom_bases_font;

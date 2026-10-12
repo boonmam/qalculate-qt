@@ -38,6 +38,7 @@
 
 #include "expressionedit.h"
 #include "historyview.h"
+#include "stackedfractions.h"
 #include "qalculateqtsettings.h"
 
 bool qstring_has_nondigit(const QString &str) {
@@ -48,6 +49,7 @@ bool qstring_has_nondigit(const QString &str) {
 }
 
 QString unhtmlize(QString str, bool b_ascii) {
+	str = restoreStackedFractions(str);
 	int i = 0, i2;
 	str.remove("\n");
 	while(true) {
@@ -152,6 +154,18 @@ QString unhtmlize(QString str, bool b_ascii) {
 	str.replace("&#8239;", NNBSP);
 	str.replace("&quot;", "\"");
 	return str;
+}
+
+QString HistoryView::fractionHtml(const QString &html, qreal scale) {
+    if(!settings->stacked_fractions || !settings->format_result) return html;
+    QFont f = font();
+    if(f.pointSizeF() > 0) f.setPointSizeF(f.pointSizeF() * scale);
+    else f.setPixelSize(qRound(f.pixelSize() * scale));
+    return stackedFractionHtml(html, f, text_color);
+}
+QVariant HistoryView::loadResource(int type, const QUrl &url) {
+    QVariant resource = stackedFractionResource(type, url);
+    return resource.isValid() ? resource : QTextEdit::loadResource(type, url);
 }
 
 HistoryView::HistoryView(QWidget *parent) : QTextEdit(parent) {
@@ -565,8 +579,8 @@ void HistoryView::addResult(std::vector<std::string> values, std::string express
 				str += QStringLiteral("<a name=\"a%1\" style=\"text-decoration: none\">").arg(initial_load ? (int) index : settings->v_expression.size() - 1);
 				if(pexact) str += "= ";
 				else str += SIGN_ALMOST_EQUAL " ";
-				if(!settings->colorize_result) str += QString::fromStdString(uncolorize(parse, false));
-				else str += QString::fromStdString(replace_parse_colors(parse));
+				if(!settings->colorize_result) str += fractionHtml(QString::fromStdString(uncolorize(parse, false)));
+				else str += fractionHtml(QString::fromStdString(replace_parse_colors(parse)));
 				str += "</a>";
 				str += "</i>";
 			} else {
@@ -578,8 +592,8 @@ void HistoryView::addResult(std::vector<std::string> values, std::string express
 			if(temporary) str += "<a name=\"TP\" style=\"text-decoration: none\">";
 			else str += QStringLiteral("<a name=\"%1\" style=\"text-decoration: none\">").arg(initial_load ? (int) index : settings->v_expression.size() - 1);
 			if(!pexact) str += SIGN_ALMOST_EQUAL " ";
-			if(!settings->colorize_result) str += QString::fromStdString(uncolorize(parse, false));
-			else str += QString::fromStdString(parse);
+			if(!settings->colorize_result) str += fractionHtml(QString::fromStdString(uncolorize(parse, false)));
+			else str += fractionHtml(QString::fromStdString(parse));
 			str += "</a>";
 			if(!temporary && b_parse_error && !expression.empty()) {
 				str += "&nbsp;&nbsp;&nbsp; ";
@@ -678,14 +692,17 @@ void HistoryView::addResult(std::vector<std::string> values, std::string express
 				last_ref = sref;
 			}
 		}
+		qreal fraction_scale = 1.0;
 		str += "</td><td style=\"text-align:right";
 		if(initial_load == 1 || initial_load == 2 || (initial_load > 1 && n > 0 && i_answer <= i_answer_pre) || w * 1.5 + w_number > width() || !settings->format_result) {
 			gsub("</i>", "<img src=\"data://img1px.png\" width=\"1\"/></i>", values[i]);
 		} else if(w * 1.85 + w_number > width()) {
+			fraction_scale = 1.2;
 			str += "; font-size:large";
 			if(temporary) {str += "; line-height:"; str += QString::number((int) fm.lineSpacing() * 1.5); str += "px";}
 			gsub("</i>", "<img src=\"data://img1px.png\" width=\"2\"/></i>", values[i]);
 		} else {
+			fraction_scale = 1.5;
 			str += "; font-size:x-large";
 			gsub("</i>", "<img src=\"data://img1px.png\" width=\"2\"/></i>", values[i]);
 		}
@@ -708,8 +725,8 @@ void HistoryView::addResult(std::vector<std::string> values, std::string express
 			if(b_exact > 0) str += "= ";
 			else if(b_exact == 0) str += SIGN_ALMOST_EQUAL " ";
 		}
-		if(!settings->colorize_result) str += QString::fromStdString(uncolorize(values[i], false));
-		else str += QString::fromStdString(values[i]);
+		if(!settings->colorize_result) str += fractionHtml(QString::fromStdString(uncolorize(values[i], false)), fraction_scale);
+		else str += fractionHtml(QString::fromStdString(values[i]), fraction_scale);
 		if(!image.isEmpty() && i == values.size() - 1 && w * 1.85 + w_number + fm.ascent() <= width()) {
 			str += QStringLiteral("<img src=\"data://img1px.png\" width=\"2\"/><img valign=\"top\" src=\"%1\" height=\"%2\"").arg(image).arg(fm.ascent());
 			CALCULATOR->setExchangeRatesUsed(-100);
@@ -1356,15 +1373,11 @@ void HistoryView::setMenuAndToolbarItems(QMenu *mode, QMenu *menu, QAction *acti
 	}
 }
 void HistoryView::doFind() {
-	if(!find(searchEdit->text(), b_reversed ? QTextDocument::FindBackward : QTextDocument::FindFlags())) {
-		QTextCursor c = textCursor();
-		QTextCursor cbak = c;
-		c.movePosition(b_reversed ? QTextCursor::End : QTextCursor::Start);
-		setTextCursor(c);
-		if(!find(searchEdit->text())) {
-			setTextCursor(cbak);
-		}
-	}
+    const auto flags = b_reversed ? QTextDocument::FindBackward : QTextDocument::FindFlags();
+    int from = b_reversed ? textCursor().selectionStart() : textCursor().selectionEnd();
+    QTextCursor found = findFractionText(document(), searchEdit->text(), from, flags);
+    if(found.isNull()) found = findFractionText(document(), searchEdit->text(), b_reversed ? document()->characterCount() - 1 : 0, flags);
+    if(!found.isNull()) { setTextCursor(found); ensureCursorVisible(); }
 }
 void HistoryView::editFind() {
 	if(searchDialog) {
@@ -1502,7 +1515,7 @@ std::string unformat(std::string str, bool restorable) {
 void HistoryView::editCopy(int ascii) {
 	if(ascii < 0) ascii = settings->copy_ascii;
 	if(textCursor().hasSelection()) {
-		QString str = textCursor().selection().toHtml(), str_nohtml;
+		QString str = restoreStackedFractions(textCursor().selection().toHtml()), str_nohtml;
 		int i = str.indexOf("<!--StartFragment-->");
 		if(i >= 0) {
 			int i2 = str.indexOf("<!--EndFragment-->", i + 20);

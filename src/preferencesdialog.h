@@ -64,6 +64,7 @@ class PreferencesDialog : public QDialog {
 		void ignoreDotToggled(bool);
 		void colorizeToggled(bool);
 		void formatToggled(bool);
+		void stackedFractionsToggled(bool);
 		void parsingModeChanged(int);
 		void unknownsToggled(bool);
 		void temperatureCalculationChanged(int);
